@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public class CreateAccountResponse {
 
     private Long accountId;
+    private String accountName;
     private String accountNumber;
     private Currency currency;
     private LocalDateTime createdAt;
@@ -19,6 +20,7 @@ public class CreateAccountResponse {
     public static CreateAccountResponse of(Account account) {
         return CreateAccountResponse.builder()
                 .accountId(account.getId())
+                .accountName(account.getAccountName())
                 .accountNumber(account.getAccountNumber())
                 .currency(account.getCurrency())
                 .createdAt(account.getCreatedAt())
