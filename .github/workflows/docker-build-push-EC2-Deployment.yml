@@ -27,18 +27,16 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew clean build
 
-      # 프로젝트를 압축해서 전송
-      - name: Compress Project
-        run: zip -r app.zip . -x "*.git*"
-
-      - name: Deploy Code to EC2
-        uses: appleboy/scp-action@v0.1.6
+      # EC2로 파일 전송 (압축 없이)
+      - name: Deploy Source Code to EC2
+        uses: appleboy/scp-action@v0.1.8
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: ./app.zip
-          target: ~/app.zip
+          source: ./
+          target: ~/app
+          debug: true
 
       # EC2에서 Docker 빌드 및 실행
       - name: Build and Run Docker on EC2
@@ -48,21 +46,22 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # 디렉토리 생성 및 압축 해제
-            unzip -o ~/app.zip -d ~/app || { echo "Failed to unzip app.zip"; exit 1; }
-  
-            ls ~/app/Dockerfile || { echo "Dockerfile not found"; exit 1; }
-  
+            # 디렉토리 준비
+            mkdir -p ~/app
             cd ~/app
-            docker build -t your-app:${{ github.sha }} . || { echo "Docker build failed"; exit 1; }
-  
+
+            # Docker 빌드
+            docker build -t your-app:${{ github.sha }} .
+
+            # 기존 컨테이너 중지 및 제거
             docker stop my-app || true
             docker rm my-app || true
-  
+
+            # 새 컨테이너 실행
             docker run -d \
-            --name my-app \
-            -e SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bankDB \
-            -e SPRING_DATASOURCE_USERNAME=root \
-            -e SPRING_DATASOURCE_PASSWORD=${{ secrets.DATABASE_PASSWORD }} \
-            -p 8080:8080 \
-            your-app:${{ github.sha }}
+              --name my-app \
+              -e SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bankDB \
+              -e SPRING_DATASOURCE_USERNAME=root \
+              -e SPRING_DATASOURCE_PASSWORD=${{ secrets.DATABASE_PASSWORD }} \
+              -p 8080:8080 \
+              your-app:${{ github.sha }}
