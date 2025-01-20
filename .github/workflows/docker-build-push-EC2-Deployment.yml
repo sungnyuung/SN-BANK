@@ -32,7 +32,7 @@ jobs:
           IMAGE_NAME=your-app
           TAG=${{ github.sha }}
           docker build -t $IMAGE_NAME:$TAG .
-          docker save your-app:$TAG -o your-app.jar
+          docker save your-app:$TAG -o your-app.tar
 
       - name: Fix Permissions
         run: chmod 644 ./your-app.tar
