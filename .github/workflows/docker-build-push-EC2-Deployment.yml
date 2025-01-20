@@ -32,7 +32,7 @@ jobs:
           IMAGE_NAME=your-app
           TAG=${{ github.sha }}
           docker build -t $IMAGE_NAME:$TAG .
-          docker save $IMAGE_NAME:$TAG -o your-app.tar
+          docker save your-app:${{ github.sha }} | gzip > your-app.tar.gz
 
       - name: Fix Permissions
         run: chmod 644 ./your-app.tar
@@ -43,9 +43,9 @@ jobs:
           host: ${{secrets.EC2_HOST}}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY}}
-          source: ./your-app.tar
-          target: ~/your-app.tar
-
+          source: ./your-app.tar.gz
+          target: ~/your-app.tar.gz
+          tar_exec: "tar --fast"
 
       - name: Load Docker Image and Run Container on EC2
         uses: appleboy/ssh-action@v0.1.8
@@ -54,14 +54,9 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # 애플리케이션 컨테이너 실행
-            docker load <~/your-app.tar
-                  # 로드된 이미지 태그 확인 및 재설정
-            docker images | grep your-app:${{ github.sha }} || {
-            echo "Image not found with tag, retagging..."
-            IMAGE_ID=$(docker images -q | head -n 1)
-            docker tag $IMAGE_ID your-app:${{ github.sha }}
-            }
+            gzip -d ~/your-app.tar.gz
+            IMAGE_ID=$(docker load < ~/your-app.tar | awk '/Loaded image/ { print $3 }')
+
             docker stop my-app || true
             docker rm my-app || true
             docker run -d \
@@ -71,4 +66,4 @@ jobs:
               -e SPRING_DATASOURCE_USERNAME=root \
               -e SPRING_DATASOURCE_PASSWORD=${{ secrets.DATABASE_PASSWORD }} \
               -p 8080:8080 \
-              your-app:${{ github.sha }}
+              $IMAGE_ID
