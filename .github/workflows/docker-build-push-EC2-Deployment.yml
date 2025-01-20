@@ -48,16 +48,22 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # 디렉토리 생성 및 압축 해제
             mkdir -p ~/app
-            unzip -o ~/app.zip -d ~/app
+            unzip -o ~/app.zip -d ~/app || { echo "Failed to unzip app.zip"; exit 1; }
+  
+            ls ~/app/Dockerfile || { echo "Dockerfile not found"; exit 1; }
+  
             cd ~/app
-            docker build -t your-app:${{ github.sha }} .
+            docker build -t your-app:${{ github.sha }} . || { echo "Docker build failed"; exit 1; }
+  
             docker stop my-app || true
             docker rm my-app || true
+  
             docker run -d \
-              --name my-app \
-              -e SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bankDB \
-              -e SPRING_DATASOURCE_USERNAME=root \
-              -e SPRING_DATASOURCE_PASSWORD=${{ secrets.DATABASE_PASSWORD }} \
-              -p 8080:8080 \
-              your-app:${{ github.sha }}
+            --name my-app \
+            -e SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bankDB \
+            -e SPRING_DATASOURCE_USERNAME=root \
+            -e SPRING_DATASOURCE_PASSWORD=${{ secrets.DATABASE_PASSWORD }} \
+            -p 8080:8080 \
+            your-app:${{ github.sha }}
