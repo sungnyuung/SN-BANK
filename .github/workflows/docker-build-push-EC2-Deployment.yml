@@ -27,12 +27,15 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew clean build
 
-      - name: Build and Compress Docker Image
+      - name: Build and Save Docker Image
         run: |
           IMAGE_NAME=your-app
           TAG=${{ github.sha }}
           docker build -t $IMAGE_NAME:$TAG .
-          docker save $IMAGE_NAME:$TAG | gzip > your-app.tar.gz
+          docker save $IMAGE_NAME:$TAG -o your-app.tar
+
+      - name: Compress Docker Image
+        run: gzip your-app.tar
 
       - name: Fix Permissions
         run: chmod 644 ./your-app.tar.gz
