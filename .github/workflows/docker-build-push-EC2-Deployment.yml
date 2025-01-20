@@ -29,7 +29,7 @@ jobs:
 
       # EC2로 파일 전송 (압축 없이)
       - name: Deploy Source Code to EC2
-        uses: appleboy/scp-action@v0.1.8
+        uses: appleboy/scp-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
