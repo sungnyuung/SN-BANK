@@ -40,6 +40,9 @@ jobs:
       - name: Fix Permissions
         run: chmod 644 ./your-app.tar.gz
 
+      - name: Verify Compressed File
+        run: ls -lh ./your-app.tar.gz
+
       - name: Copy Docker Image to EC2
         uses: appleboy/scp-action@v0.1.6
         with:
