@@ -51,6 +51,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY}}
           source: ./your-app.tar.gz
           target: ~/your-app.tar.gz
+          timeout: 10m
 
       - name: Load Docker Image and Run Container on EC2
         uses: appleboy/ssh-action@v0.1.8
