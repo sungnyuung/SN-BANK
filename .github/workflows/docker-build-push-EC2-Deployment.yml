@@ -60,6 +60,7 @@ jobs:
             # 새 컨테이너 실행
             docker run -d \
               --name my-app \
+              --link mysql-container:mysql \
               -e SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bankDB \
               -e SPRING_DATASOURCE_USERNAME=root \
               -e SPRING_DATASOURCE_PASSWORD=${{ secrets.DATABASE_PASSWORD }} \
