@@ -27,15 +27,15 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew clean build
 
-      - name: Build and Save Docker Image
+      - name: Build and Compress Docker Image
         run: |
           IMAGE_NAME=your-app
           TAG=${{ github.sha }}
           docker build -t $IMAGE_NAME:$TAG .
-          docker save your-app:$TAG -o your-app.tar
+          docker save $IMAGE_NAME:$TAG | gzip > your-app.tar.gz
 
       - name: Fix Permissions
-        run: chmod 644 ./your-app.tar
+        run: chmod 644 ./your-app.tar.gz
 
       - name: Copy Docker Image to EC2
         uses: appleboy/scp-action@v0.1.6
@@ -43,8 +43,8 @@ jobs:
           host: ${{secrets.EC2_HOST}}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY}}
-          source: ./your-app.tar
-          target: ~/your-app.tar
+          source: ./your-app.tar.gz
+          target: ~/your-app.tar.gz
 
       - name: Load Docker Image and Run Container on EC2
         uses: appleboy/ssh-action@v0.1.8
@@ -53,6 +53,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            gzip -d ~/your-app.tar.gz
             IMAGE_ID=$(docker load < ~/your-app.tar | awk '/Loaded image/ { print $3 }')
 
             docker stop my-app || true
