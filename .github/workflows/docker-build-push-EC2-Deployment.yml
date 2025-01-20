@@ -56,6 +56,12 @@ jobs:
           script: |
             # 애플리케이션 컨테이너 실행
             docker load <~/your-app.tar
+                  # 로드된 이미지 태그 확인 및 재설정
+            docker images | grep your-app:${{ github.sha }} || {
+            echo "Image not found with tag, retagging..."
+            IMAGE_ID=$(docker images -q | head -n 1)
+            docker tag $IMAGE_ID your-app:${{ github.sha }}
+            }
             docker stop my-app || true
             docker rm my-app || true
             docker run -d \
