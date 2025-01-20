@@ -1,8 +1,8 @@
-name: Docker Build and Push and EC2 Deployment
+name: Docker Build and Push and EC2 Deployment(도커 허브 없이 EC2로 이미지 전달)
 on:
   push:
     branches:
-      - 'dev'
+      - '**'
 
 jobs:
   build-and-deploy:
@@ -33,14 +33,24 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Docker Image
+      - name: Build and Save Docker Image
         run: |
-          IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/your-app
+          IMAGE_NAME=your-app
           TAG=${{ github.sha }}
           docker build -t $IMAGE_NAME:$TAG .
-          docker push $IMAGE_NAME:$TAG
+          docker save $IMAGE_NAME:$TAG -o your-app.tar
 
-      - name: Deploy to EC2
+      - name: Copy Docker Image to EC2
+        uses: appleboy/scp-action@v0.1.8
+        with:
+          host: ${{secrets.EC2_HOST}}
+          username: ubuntu
+          key: ${{ secrets.EC2_HOST}}
+          source: ./your-app.tar
+          target: ~/your-app.tar
+
+
+      - name: Load Docker Image and Run Container on EC2
         uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -48,7 +58,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # 애플리케이션 컨테이너 실행
-            docker pull ${{ secrets.DOCKER_USERNAME }}/your-app:${{ github.sha }}
+            docker load <~/your-app.tar
             docker stop my-app || true
             docker rm my-app || true
             docker run -d \
