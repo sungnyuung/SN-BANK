@@ -29,6 +29,10 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew clean build
 
+      # AWS ECR 로그인
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
       # AWS CLI 설치
       - name: Configure AWS CLI
         uses: aws-actions/configure-aws-credentials@v2
