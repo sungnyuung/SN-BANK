@@ -59,6 +59,8 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
+
             # ECR에서 Docker 이미지 풀링
             REPOSITORY_URI=${{ secrets.ECR_REPOSITORY_URI }}
             IMAGE_TAG=${{ github.sha }}
