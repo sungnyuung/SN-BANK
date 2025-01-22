@@ -1,4 +1,5 @@
-name: Docker Build and Push and EC2 Deployment(도커 허브 없이 EC2로 이미지 전달)
+name: Build and Deploy to AWS ECR
+
 on:
   push:
     branches:
@@ -7,13 +8,14 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
       # 깃허브 저장소에서 소스 코드 가져옴
       - name: Checkout Code
         uses: actions/checkout@v3
 
       # Java 17 환경 설정
-      - name: actions/setup-java@v3
+      - name: Setup Java 17
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
@@ -27,33 +29,41 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew clean build
 
-      # EC2로 파일 전송 (압축 없이)
-      - name: Deploy Source Code to EC2
-        uses: appleboy/scp-action@v0.1.6
+      # AWS CLI 설치
+      - name: Configure AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: ./
-          target: ~/app
-          debug: true
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      # EC2에서 Docker 빌드 및 실행
-      - name: Build and Run Docker on EC2
+      # Docker 로그인 (ECR)
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # Docker 이미지 빌드 및 푸시
+      - name: Build and Push Docker Image to ECR
+        run: |
+          REPOSITORY_URI=${{ secrets.ECR_REPOSITORY_URI }}
+          IMAGE_TAG=${{ github.sha }}
+          docker build -t $REPOSITORY_URI:$IMAGE_TAG .
+          docker push $REPOSITORY_URI:$IMAGE_TAG
+
+      # SSH를 사용하여 EC2에 배포
+      - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # 디렉토리 준비
-            mkdir -p ~/app
-            cd ~/app
+            # ECR에서 Docker 이미지 풀링
+            REPOSITORY_URI=${{ secrets.ECR_REPOSITORY_URI }}
+            IMAGE_TAG=${{ github.sha }}
+            docker pull $REPOSITORY_URI:$IMAGE_TAG
 
-            # Docker 빌드
-            docker build -t your-app:${{ github.sha }} .
-
-            # 기존 컨테이너 중지 및 제거
+            # 기존 컨테이너 중지 및 삭제
             docker stop my-app || true
             docker rm my-app || true
 
@@ -65,4 +75,4 @@ jobs:
               -e SPRING_DATASOURCE_USERNAME=root \
               -e SPRING_DATASOURCE_PASSWORD=${{ secrets.DATABASE_PASSWORD }} \
               -p 8080:8080 \
-              your-app:${{ github.sha }}
+              $REPOSITORY_URI:$IMAGE_TAG
