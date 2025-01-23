@@ -2,7 +2,7 @@ name: Docker Build and Push and EC2 Deployment
 on:
   push:
     branches:
-      - 'dev'
+      - '**'
 
 jobs:
   build-and-deploy:
