@@ -41,10 +41,15 @@ jobs:
           driver-opts: image=moby/buildkit:latest
 
 
-      - name: Build and Push Docker Image
+      - name: Build and Push Docker Image with Cache
         run: |
           IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/your-app
           TAG=${{ github.sha }}
+
+          # 이전 빌드 캐시 가져오기
+          docker pull $IMAGE_NAME:cache || true
+
+          # Docker 이미지 빌드 및 푸시
           docker buildx build \
             --platform linux/amd64 \
             --cache-from=type=registry,ref=$IMAGE_NAME:cache \
